@@ -29,7 +29,7 @@
             <el-switch v-model="scope.row.mg_state" @change="userStateChange(scope.row)"></el-switch>
           </template>
         </el-table-column>
-        <el-table-column label="操作">
+        <el-table-column label="操作" width="180px">
           <template slot-scope="scope">
             <!-- 修改按钮 -->
             <el-button
@@ -39,7 +39,12 @@
               @click="showEditDialog(scope.row.id)"
             ></el-button>
             <!-- 删除按钮 -->
-            <el-button type="danger" icon="el-icon-delete" size="mini"></el-button>
+            <el-button
+              type="danger"
+              icon="el-icon-delete"
+              size="mini"
+              @click="removeUserById(scope.row.id)"
+            ></el-button>
             <!-- 分配角色按钮 -->
             <el-tooltip
               class="item"
@@ -270,10 +275,15 @@ export default {
     editUser(formName) {
       this.$refs[formName].validate(async valid => {
         if (valid) {
-          const { data: res } = await this.$http.post('users', this.addForm)
-          if (res.meta.status !== 201) {
+          const { email, mobile } = this.editForm
+          const { data: res } = await this.$http.put(
+            'users/' + this.editForm.id,
+            { email, mobile }
+          )
+          // debugger
+          if (res.meta.status !== 200) {
             return this.$message({
-              message: '修改用户失败',
+              message: '修改用户失败' + res.meta.msg,
               type: 'error'
             })
           }
@@ -288,6 +298,18 @@ export default {
           return false
         }
       })
+    },
+    async removeUserById(id) {
+      const confirmResult = await this.$confirm(
+        '此操作将永久删除该用户, 是否继续?',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+      console.log(confirmResult)
     }
   }
 }
