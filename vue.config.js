@@ -21,5 +21,7 @@ module.exports = {
     if (process.env.NODE_ENV === 'development') {
       config.devtool = 'source-map'
     }
-  }
+  },
+  // 打包问题
+  publicPath: './'
 }
