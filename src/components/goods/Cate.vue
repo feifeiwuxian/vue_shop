@@ -10,7 +10,7 @@
     <el-card>
       <el-row>
         <el-col>
-          <el-button type="primary">添加分类</el-button>
+          <el-button type="primary" @click="showAddCateDialog">添加分类</el-button>
         </el-col>
       </el-row>
       <!-- 表格区 -->
@@ -61,6 +61,32 @@
         :total="total"
       ></el-pagination>
     </el-card>
+    <el-dialog title="添加分类" :visible.sync="addDialogVisible" width="50%" @close="addDialogClose">
+      <el-form
+        ref="addCateFormRef"
+        :model="addCateForm"
+        :rules="addCateFormRules"
+        label-width="100px"
+      >
+        <el-form-item label="分类名称" prop="cat_name">
+          <el-input v-model="addCateForm.cat_name"></el-input>
+        </el-form-item>
+        <el-form-item label="父级分类">
+          <el-cascader
+            popper-class="mycascader-pop"
+            v-model="selectedKeys"
+            :options="parentCateList"
+            :props="cascaderProps"
+            @change="parentCateChange"
+            clearable
+          ></el-cascader>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="addDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="addCate">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -117,7 +143,27 @@ export default {
           // 表示当前这一列使用模板名称
           template: 'opt'
         }
-      ]
+      ],
+      addCateFormRules: {
+        cat_name: [
+          { required: true, message: '请输入分类名称', trigger: 'blur' }
+        ]
+      },
+      parentCateList: [],
+      addDialogVisible: false,
+      addCateForm: {
+        cat_name: '',
+        cat_pid: 0, // 父级分类的id
+        cat_level: 0 // 父级分类的等级
+      },
+      cascaderProps: {
+        expandTrigger: 'hover',
+        checkStrictly: true, // 选中任意
+        value: 'cat_id',
+        label: 'cat_name',
+        children: 'children'
+      },
+      selectedKeys: []
     }
   },
   created() {
@@ -145,6 +191,62 @@ export default {
     handleCurrentChange(newPage) {
       this.querInfo.pagenum = newPage
       this.getCateList()
+    },
+    showAddCateDialog() {
+      this.getParentCateList()
+      this.addDialogVisible = true
+    },
+    async getParentCateList() {
+      const { data: res } = await this.$http.get('categories', {
+        params: { type: 2 }
+      })
+      if (res.meta.status !== 200) {
+        return this.$message.error('获取父级分类数据失败!')
+      }
+      console.log(res.data)
+      this.parentCateList = res.data
+    },
+    parentCateChange() {
+      console.log(this.selectedKeys)
+      if (this.selectedKeys.length > 0) {
+        // 父级分类的Id
+        this.addCateForm.cat_pid = this.selectedKeys[
+          this.selectedKeys.length - 1
+        ]
+        // 为当前分类的等级赋值
+        this.addCateForm.cat_level = this.selectedKeys.length
+      } else {
+        // 父级分类的Id
+        this.addCateForm.cat_pid = 0
+        // 为当前分类的等级赋值
+        this.addCateForm.cat_level = 0
+      }
+    },
+    addDialogClose() {
+      this.$refs.addCateFormRef.resetFields()
+      this.selectedKeys = []
+      this.addCateForm.cat_level = 0
+      this.addCateForm.cat_pid = 0
+    },
+    // 点击按钮，添加新的分类
+    addCate() {
+      console.log(this.addCateForm)
+
+      console.log('ssss')
+      this.$refs.addCateFormRef.validate(async valid => {
+        if (!valid) return
+        const { data: res } = await this.$http.post(
+          'categories',
+          this.addCateForm
+        )
+        console.log(res)
+        if (res.meta.status !== 201) {
+          return this.$message.error('添加分类失败')
+        }
+        this.$message.success('添加分类成功！')
+        this.getCateList()
+        this.addDialogVisible = false
+      })
     }
   }
 }
@@ -153,5 +255,18 @@ export default {
 <style lang="less" scoped>
 .tree-table {
   margin-top: 15px;
+}
+.el-cascader {
+  width: 100%;
+}
+// /deep/ .el-form-item__label {
+//   color: red;
+// }
+</style>
+<style lang="less">
+.mycascader-pop {
+  .el-cascader-panel {
+    max-height: 300px;
+  }
 }
 </style>
